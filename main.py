@@ -190,8 +190,8 @@ class Nest:
             distance = np.random.uniform()
             
             # Create and append ant to self.ants
-            # alarmed = (n == num - 1) 
-            alarmed = False
+            alarmed = (n == num - 1) 
+            #alarmed = False
             self.ants.append(Ant(n, self, node1, node2, distance, np.random.uniform(0.05 + 0.05*alarmed, 0.07 + 0.05*alarmed), alarmed))
         
         self.ant_network = AntNetwork(self.ants)
@@ -227,11 +227,14 @@ if __name__ == '__main__':
 
     n = Nest(directed = False)
 
+    '''n.randomize_graph(5, 8)
+    n.randomize_ants(5)'''
+
+    n.randomize_graph(10, 30)
+    n.randomize_ants(20)
+
     '''n.randomize_graph(8, 10)
     n.randomize_ants(50)'''
-
-    n.randomize_graph(5, 8)
-    n.randomize_ants(5)
 
     print(n.graph)
 
@@ -258,7 +261,7 @@ if __name__ == '__main__':
         n.interact()
         end_interact = time.time()
 
-        if frame % 250 == 0:
+        if frame % 1000 == 0:
             print(frame)
             print('Draw Time:', end_draw - start_draw, 'Move Time:', end_move - start_move, 'Interact Time:', end_interact - start_interact)
             print('Frame Time:', end_draw - start_draw + end_move - start_move + end_interact - start_interact)
