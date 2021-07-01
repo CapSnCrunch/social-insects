@@ -72,6 +72,7 @@ class AntNetwork:
             self.graph[ant2].add(ant1)
     
     def draw(self):
+        # Draw ant network on top of nest
         for ant1 in self.graph:
             for ant2 in self.graph[ant1]:
                 if ant1.alarmed or ant2.alarmed:
@@ -80,6 +81,24 @@ class AntNetwork:
                     color = (0, 0, 255)
                 pygame.draw.line(win, color, (ant1.get_position()), (ant2.get_position()), 1)
 
+        # Draw static ant network to the side
+        theta = 2*np.pi / len(self.graph)
+        ants = list(self.graph.keys())
+        for n in range(len(self.graph)):
+            if ants[n].alarmed:
+                color = (255, 0, 0)
+            else:
+                color = (0, 0, 255)
+            x1 = window_size + int(window_size / 2 + 0.3 * window_size * np.cos(n * theta))
+            y1 = int(window_size / 2 + 0.3 * window_size * np.sin(n * theta))
+            pygame.draw.circle(win, color, (x1, y1), 5)
+            connected_ants = list(self.graph[ants[n]])
+            for k in range(len(connected_ants)):
+                k = ants.index(connected_ants[k])
+                x2 = window_size + int(window_size / 2 + 0.3 * window_size * np.cos(k * theta))
+                y2 = int(window_size / 2 + 0.3 * window_size * np.sin(k * theta))
+                pygame.draw.line(win, color, (x1, y1), (x2, y2), 1)
+                
 class Nest:
     '''Nests have a graph structure which can be either directed or undirected'''
     def __init__(self, nodes = [], edges = [], directed = True):
@@ -221,17 +240,17 @@ class Nest:
             ant.draw()
 
 if __name__ == '__main__':
-    win = pygame.display.set_mode((window_size, window_size))
+    win = pygame.display.set_mode((window_size*2, window_size))
     pygame.display.set_caption('Ant Nest Simulator')
     win.fill((255,255,255))
 
     n = Nest(directed = False)
 
-    '''n.randomize_graph(5, 8)
-    n.randomize_ants(5)'''
+    n.randomize_graph(5, 8)
+    n.randomize_ants(5)
 
-    n.randomize_graph(10, 30)
-    n.randomize_ants(20)
+    '''n.randomize_graph(10, 30)
+    n.randomize_ants(30)'''
 
     '''n.randomize_graph(8, 10)
     n.randomize_ants(50)'''
