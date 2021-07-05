@@ -71,6 +71,13 @@ class AntNetwork:
         if not self.directed:
             self.graph[ant2].add(ant1)
     
+    def get_alarmed(self):
+        '''Returns the number of alarmed ants'''
+        total = 0
+        for ant in list(self.graph.keys()):
+            total += ant.alarmed
+        return total
+
     def draw(self):
         # Draw ant network on top of nest
         for ant1 in self.graph:
@@ -240,22 +247,26 @@ class Nest:
             ant.draw()
 
 if __name__ == '__main__':
-    win = pygame.display.set_mode((window_size*2, window_size))
+    win = pygame.display.set_mode((window_size*2, int(window_size*1.5)))
     pygame.display.set_caption('Ant Nest Simulator')
     win.fill((255,255,255))
 
-    n = Nest(directed = False)
+    nest = Nest(directed = False)
 
-    n.randomize_graph(5, 8)
-    n.randomize_ants(5)
+    nest.randomize_graph(5, 7)
+    nest.randomize_ants(5)
 
-    '''n.randomize_graph(10, 30)
-    n.randomize_ants(30)'''
+    '''nest.randomize_graph(10, 30)
+    nest.randomize_ants(30)'''
 
-    '''n.randomize_graph(8, 10)
-    n.randomize_ants(50)'''
+    '''nest.randomize_graph(8, 10)
+    nest.randomize_ants(50)'''
 
-    print(n.graph)
+    print(nest.graph)
+
+    # Track alarmed ants over time
+    alarmed_ant_total = nest.ant_network.get_alarmed() / len(nest.ants)
+    data_points = [(0, alarmed_ant_total)]
 
     frame = 0
     clock = pygame.time.Clock()
@@ -267,24 +278,48 @@ if __name__ == '__main__':
 
         win.fill((255,255,255))
 
-        start_draw = time.time()
-        n.draw()
+        # Timing Stuff for Efficiency Testing
+        '''start_draw = time.time()
+        nest.draw()
         end_draw = time.time()
         
         start_move = time.time()
-        for ant in n.ants:
+        for ant in nest.ants:
             ant.move()
         end_move = time.time()
 
         start_interact = time.time()
-        n.interact()
+        nest.interact()
         end_interact = time.time()
 
         if frame % 1000 == 0:
             print(frame)
             print('Draw Time:', end_draw - start_draw, 'Move Time:', end_move - start_move, 'Interact Time:', end_interact - start_interact)
             print('Frame Time:', end_draw - start_draw + end_move - start_move + end_interact - start_interact)
-            print()
+            print()'''
+        
+        nest.draw()
+        for ant in nest.ants:
+            ant.move()
+        nest.interact()
+
+        # Draw graph of alarmed ants over time
+        if nest.ant_network.get_alarmed() > alarmed_ant_total:
+            alarmed_ant_total = nest.ant_network.get_alarmed()
+            data_points.append((frame, alarmed_ant_total / len(nest.ants)))
+
+        # Axes
+        pygame.draw.line(win, (0,0,0), (window_size * 0.3, window_size * 1.3), (min(int(window_size * 0.3 + frame / 35), window_size * 1.7), window_size * 1.3), 2)
+        pygame.draw.line(win, (0,0,0), (window_size * 0.3, window_size * 0.9), (window_size * 0.3, window_size * 1.3), 2)
+        pygame.draw.line(win, (255,0,0), (int(window_size * 0.3 + data_points[-1][0] / 35), window_size * 1.3 - data_points[-1][1] * window_size * 0.4), (min(int(window_size * 0.3 + frame / 35), window_size * 1.7), window_size * 1.3 - data_points[-1][1] * window_size * 0.4), 1)
+        
+        # Plot
+        for n in range(len(data_points)):
+            pygame.draw.circle(win, (255,0,0), (int(window_size * 0.3 + data_points[n][0] / 35), window_size * 1.3 - data_points[n][1] * window_size * 0.4), 2)
+            if n != len(data_points) - 1:
+                #pygame.draw.line(win, (255,0,0), (int(window_size * 0.3 + data_points[n][0] / 35), window_size * 1.3 - data_points[n][1] * window_size * 0.4), (int(window_size * 0.3 + data_points[n+1][0] / 35), window_size * 1.3 - data_points[n+1][1] * window_size * 0.4), 1)
+                pygame.draw.line(win, (255,0,0), (int(window_size * 0.3 + data_points[n][0] / 35), window_size * 1.3 - data_points[n][1] * window_size * 0.4), (int(window_size * 0.3 + data_points[n+1][0] / 35), window_size * 1.3 - data_points[n][1] * window_size * 0.4), 1)
+                pygame.draw.line(win, (255,0,0), (int(window_size * 0.3 + data_points[n+1][0] / 35), window_size * 1.3 - data_points[n][1] * window_size * 0.4), (int(window_size * 0.3 + data_points[n+1][0] / 35), window_size * 1.3 - data_points[n+1][1] * window_size * 0.4), 1)
 
         pygame.display.update()
 
