@@ -123,33 +123,6 @@ class Nest:
     
     def interact(self):
         checks = 0
-        # Check every combination of ants
-        '''for ant1 in self.ants:
-            for ant2 in self.ants:
-                if ant1 != ant2:
-                    ant1x, ant1y = ant1.get_position()
-                    ant2x, ant2y = ant2.get_position()
-                    if np.sqrt((ant2x - ant1x)**2 + (ant2y - ant1y)**2) < ant1.radius:
-                        self.ant_network.add_connection(ant1, ant2)
-                        if ant1.alarmed and not ant2.alarmed:
-                            ant2.alarmed = True
-                            ant2.speed += np.random.uniform(0.03, 0.07)
-                    checks += 1'''
-        # Check every combination of ants
-        '''for i in range(len(self.ants)):
-            for j in range(i+1, len(self.ants)):
-                ant1, ant2 = self.ants[i], self.ants[j]
-                ant1x, ant1y = ant1.get_position()
-                ant2x, ant2y = ant2.get_position()
-                if np.sqrt((ant2x - ant1x)**2 + (ant2y - ant1y)**2) < ant1.radius:
-                    self.ant_network.add_connection(ant1, ant2)
-                    if ant1.alarmed and not ant2.alarmed:
-                        ant2.alarmed = True
-                        ant2.speed += np.random.uniform(0.03, 0.07)
-                    if ant2.alarmed and not ant1.alarmed:
-                        ant1.alarmed = True
-                        ant1.speed += np.random.uniform(0.03, 0.07)
-                checks += 1'''
         # Check ants which are on the same edge
         for i in range(len(self.ants)):
             for j in range(i+1, len(self.ants)):

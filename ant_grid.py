@@ -2,12 +2,17 @@ import pygame
 import numpy as np
 import matplotlib.pyplot as plt
 
-K1, K2 = 50, 50
+K1, K2 = 100, 50
+N = 500
 beta = 0.5
-N = 200
+
+config = 'AID' # RM, RID, AID
+f = 0.5
+fp = [0.8, 1, 0.5, 0]
 
 time_steps = 300
-scale = 5
+dt = 1
+scale = 7
 
 class Ant:
     def __init__(self, location, task, walking_style, information):
@@ -46,25 +51,44 @@ class Colony:
     N : number of ants within the colony
     P: number of distinct tasks within in the colony
     '''
-    def __init__(self, K1, K2, N, sfzs = []):
+    def __init__(self, K1, K2, N, sfzs = [], config = 'RM'):
         self.grid = np.zeros((K1, K2), dtype = int)
         self.ants = []
         self.sfzs = sfzs
         self.P = len(sfzs)
+        
+        locations = []
         while N > 0:
             i = np.random.randint(K1)
             j = np.random.randint(K2)
             if self.grid[i,j] == 0:
-                p = np.random.randint(self.P)
-                w = np.random.choice(['R','D'])
-                f = (N == 1)
-                ant = Ant((i,j), p, w, f)
+                locations.append((i,j))
+                if config == 'RM':
+                    p = 0
+                    w = 'R'
+                elif config == 'RID':
+                    p = np.random.randint(self.P)
+                    w = np.random.choice(['R','D'], p = [1-f, f])
+                elif config == 'AID':
+                    p = np.random.randint(self.P)
+                    w = np.random.choice(['R','D'], p = [1-fp[p], fp[p]])
+                ant = Ant((i,j), p, w, (N == 1))
                 self.ants.append(ant)
                 self.grid[i,j] = len(self.ants)
                 N -= 1
         
         self.contacts = [0]
     
+    def get_sf(self, p):
+        count = 0
+        total = 0
+        for ant in self.ants:
+            if ant.p == p:
+                total += 1
+                if ant.w == 'D':
+                    count += 1
+        return count / total
+
     def update(self):
         contacts = 0
         remaining_ants = list(range(len(self.ants)))
@@ -72,11 +96,11 @@ class Colony:
             n = remaining_ants.pop(np.random.randint(len(remaining_ants)))
             A = self.ants[n]
             i, j = A.l
-            N = [(i+a, j+b) for a, b in [(1, 0), (-1, 0), (0, 1), (0, -1)] if min(i+a,j+b) > -1 and max(i+a,j+b) < min(K1, K2)]
+            N = [(i+a, j+b) for a, b in [(1, 0), (-1, 0), (0, 1), (0, -1)] if min(i+a,j+b) > -1 and i+a < K1 and j+b < K2]
             N = [self.ants[self.grid[a,b]-1] for a, b in N if self.grid[a,b] != 0]
             u1 = np.random.uniform(0, 1)
             if u1 > len(N) / 4:
-                open_moves = [(i+a,j+b) for a, b in [(1, 0), (-1, 0), (0, 1), (0, -1)] if min(i+a,j+b) > -1 and max(i+a,j+b) < min(K1, K2)]
+                open_moves = [(i+a,j+b) for a, b in [(1, 0), (-1, 0), (0, 1), (0, -1)] if min(i+a,j+b) > -1 and i+a < K1 and j+b < K2]
                 open_moves = [(a,b) for a, b in open_moves if self.grid[a,b] == 0]
                 if A.w == 'R' and len(open_moves) > 0:
                     new_i, new_j = open_moves[np.random.choice(len(open_moves))]
@@ -122,7 +146,7 @@ if __name__ == '__main__':
     sfzs.append(SFZ([(x,y) for x in range(K1-15, K1) for y in range(K2-15, K2)], (0, 0, 200)))
     sfzs.append(SFZ([(x,y) for x in range(15) for y in range(K2-15, K2)], (0, 200, 0)))
 
-    colony = Colony(K1, K2, N, sfzs)
+    colony = Colony(K1, K2, N, sfzs, config)
     
     t = 0
     clock = pygame.time.Clock()
@@ -137,12 +161,34 @@ if __name__ == '__main__':
         colony.update()
 
         t += 1
-        print(t)
+        #print(t)
         if t == time_steps:
             run = False
 
-    plt.plot(colony.contacts)
-    plt.title('Total Contacts over Time')
+    C = np.array(colony.contacts)
+    R = np.array([(C[i+1]-C[i])/dt for i in range(len(C)-1)])
+    I = C / N
+
+    # Spatial Fidelity of each task group
+    for p in range(colony.P):
+        print('SF('+str(p)+'):', colony.get_sf(p))
+
+    '''plot1 = plt.figure(1)
+    plt.plot(C)
+    plt.title('Total Contacts')
     plt.xlabel('t')
-    plt.ylabel('C(t)')
+    plt.ylabel('C(t)')'''
+
+    plot2 = plt.figure(2)
+    plt.plot(I)
+    plt.title('Proportion of Informed Ants')
+    plt.xlabel('t')
+    plt.ylabel('I(t)')
+
+    plot3 = plt.figure(3)
+    plt.scatter(np.arange(len(R)), R, s = 3)
+    plt.title('Contact Rate')
+    plt.xlabel('t')
+    plt.ylabel('I(t)')
+
     plt.show()
