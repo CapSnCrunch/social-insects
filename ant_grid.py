@@ -2,17 +2,17 @@ import pygame
 import numpy as np
 import matplotlib.pyplot as plt
 
-K1, K2 = 100, 50
-N = 500
+K1, K2 = 50, 50
+N = 100
 beta = 0.5
 
 config = 'AID' # RM, RID, AID
-f = 0.5
-fp = [0.8, 1, 0.5, 0]
+f = 0.7
+fp = [0.8, 1, 0.5, 0.2]
 
-time_steps = 300
+time_steps = 150
 dt = 1
-scale = 7
+scale = 10
 
 class Ant:
     def __init__(self, location, task, walking_style, information):
@@ -20,11 +20,22 @@ class Ant:
         self.p = task
         self.w = walking_style
         self.f = information
+        self.beta = np.random.uniform(0,1)
+
+        self.network = []
 
     def draw(self):
         color = (255*self.f, 0, 255*(1-self.f))
         i, j = self.l
         pygame.draw.rect(win, color, (i*scale, j*scale, scale, scale))
+
+'''class Wall:
+    def __init__(self, location):
+        self.l = location
+    
+    def draw(self):
+        i, j = self.l
+        pygame.draw.rect(win, (0, 0, 0), (i*scale, j*scale, scale, scale))'''
 
 class SFZ:
     '''
@@ -34,12 +45,16 @@ class SFZ:
     def __init__(self, points, color = (100, 0, 100)):
         self.points = points
         self.color = color
+        self.center = self.get_center()
     
     def dist(self, i, j):
         '''Returns the minimum L1 distance from (i,j) to the SFZ'''
         x = np.array([p[0] for p in self.points])
         y = np.array([p[1] for p in self.points])
         return np.amin(np.absolute(x-i) + np.absolute(y-j))
+
+    def get_center(self):
+        return
 
     def draw(self):
         for p in self.points:
@@ -56,13 +71,12 @@ class Colony:
         self.ants = []
         self.sfzs = sfzs
         self.P = len(sfzs)
+        self.Pl = np.zeros((K1, K2), dtype = int)
         
-        locations = []
         while N > 0:
             i = np.random.randint(K1)
             j = np.random.randint(K2)
             if self.grid[i,j] == 0:
-                locations.append((i,j))
                 if config == 'RM':
                     p = 0
                     w = 'R'
@@ -90,6 +104,10 @@ class Colony:
         return count / total
 
     def update(self):
+        for ant in self.ants:
+            i, j = ant.l
+            self.Pl[i,j] += 1
+            
         contacts = 0
         remaining_ants = list(range(len(self.ants)))
         while remaining_ants != []:
@@ -97,7 +115,7 @@ class Colony:
             A = self.ants[n]
             i, j = A.l
             N = [(i+a, j+b) for a, b in [(1, 0), (-1, 0), (0, 1), (0, -1)] if min(i+a,j+b) > -1 and i+a < K1 and j+b < K2]
-            N = [self.ants[self.grid[a,b]-1] for a, b in N if self.grid[a,b] != 0]
+            N = [self.ants[self.grid[a,b]-1] for a, b in N if self.grid[a,b] not in [0, -1]]
             u1 = np.random.uniform(0, 1)
             if u1 > len(N) / 4:
                 open_moves = [(i+a,j+b) for a, b in [(1, 0), (-1, 0), (0, 1), (0, -1)] if min(i+a,j+b) > -1 and i+a < K1 and j+b < K2]
@@ -116,7 +134,7 @@ class Colony:
             else:
                 B = N[np.random.choice(len(N))]
                 u2 = np.random.uniform(0, 1)
-                if u2 < beta and A.f != B.f:
+                if u2 < B.beta and A.f != B.f:
                     contacts += 1
                     A.f, B.f = 1, 1
                     A.l, B.l = B.l, A.l
@@ -136,10 +154,12 @@ class Colony:
         pygame.display.update()
 
 if __name__ == '__main__':
+    # Start a new pygame window
     run = True
     win = pygame.display.set_mode((K1 * scale, K2 * scale))
     pygame.display.set_caption('Ant Nest Simulator')
 
+    # Define custom SFZs
     sfzs = []
     sfzs.append(SFZ([(x,y) for x in range(15) for y in range(15)], (200, 0, 0)))
     sfzs.append(SFZ([(x,y) for x in range(K1-15, K1) for y in range(15)], (200, 200, 0)))
@@ -189,6 +209,6 @@ if __name__ == '__main__':
     plt.scatter(np.arange(len(R)), R, s = 3)
     plt.title('Contact Rate')
     plt.xlabel('t')
-    plt.ylabel('I(t)')
+    plt.ylabel('C(t) - C(t-dt)')
 
     plt.show()
