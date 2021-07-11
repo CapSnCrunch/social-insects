@@ -168,6 +168,8 @@ class Colony:
                     A.l, B.l = B.l, A.l
                     self.grid[A.l[0],A.l[1]], self.grid[B.l[0],B.l[1]] = self.grid[B.l[0],B.l[1]], self.grid[A.l[0],A.l[1]]
 
+        if self.contacts.size == 0:
+            self.contacts = np.append(self.contacts, [0])
         self.contacts = np.append(self.contacts, [self.contacts[-1] + contacts])
         self.shd = np.append(self.shd, self.get_shd())
 
