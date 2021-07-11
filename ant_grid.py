@@ -1,17 +1,22 @@
 import pygame
 import numpy as np
 import matplotlib.pyplot as plt
+from pygame.constants import MOUSEBUTTONDOWN
 
-K1, K2 = 250, 250
-N = 500
+K1, K2 = 50, 50
+N = 250
 
 print('SHD max:', N*(K1*K2-N)/(K1*K2)**2)
 
 config = 'RID' # RM, RID, AID
 
-time_steps = 2000
+time_steps = 500
 dt = 1
-scale = 3
+scale = 10
+
+# TODO Functions
+# Find the center of SFZ
+# Find the area of a union of rectangles
 
 class Ant:
     def __init__(self, location, task, walking_style, information):
@@ -28,13 +33,15 @@ class Ant:
         i, j = self.l
         pygame.draw.rect(win, color, (i*scale, j*scale, scale, scale))
 
-'''class Wall:
-    def __init__(self, location):
-        self.l = location
+class Wall:
+    def __init__(self, a, b):
+        self.l = (min(a[0],b[0]), min(a[1],b[1]))
+        self.size = (abs(b[0]-a[0]), abs(b[1]-a[1]))
     
     def draw(self):
         i, j = self.l
-        pygame.draw.rect(win, (0, 0, 0), (i*scale, j*scale, scale, scale))'''
+        w, h = self.size
+        pygame.draw.rect(win, (0, 0, 0), (i*scale, j*scale, w*scale, h*scale))
 
 class SFZ:
     '''
@@ -65,14 +72,46 @@ class Colony:
     N : number of ants within the colony
     P: number of distinct tasks within in the colony
     '''
-    def __init__(self, K1, K2, N, f, sfzs = [], config = 'RM'):
+    def __init__(self, K1, K2, N, f, walls = [], sfzs = [], config = 'RM'):
         self.grid = np.zeros((K1, K2), dtype = int)
         self.ants = []
         self.sfzs = sfzs
-        self.P = len(sfzs)
+        self.walls = []
+
+        self.N = N
         self.f = f
+        self.P = len(sfzs)
         self.Pl = np.zeros((K1, K2), dtype = int)
         
+        self.contacts = np.array([])
+        self.shd = np.array([])
+
+    def get_sf(self, p):
+        count = 0
+        total = 0
+        for ant in self.ants:
+            if ant.p == p:
+                total += 1
+                if ant.w == 'D':
+                    count += 1
+        try:
+            return count / total
+        except:
+            return None
+
+    def get_shd(self):
+        # TODO len(self.walls)
+        return np.sum(np.square((self.Pl / len(self.contacts)) - (len(self.ants) / (K1*K2)))) / (K1*K2)
+
+    def set_wall(self, start, stop):
+        wall = Wall(start, stop)
+        i, j = wall.l
+        w, h = wall.size
+        self.grid[i:i+w, j:j+h] = np.ones((w,h), dtype = int) * -1
+        self.walls.append(wall)
+
+    def create_ants(self):
+        N = self.N
         while N > 0:
             i = np.random.randint(K1)
             j = np.random.randint(K2)
@@ -91,25 +130,6 @@ class Colony:
                 self.grid[i,j] = len(self.ants)
                 self.Pl[i,j] += 1
                 N -= 1
-        
-        self.contacts = np.array([0])
-        self.shd = np.array([self.get_shd()])
-
-    def get_sf(self, p):
-        count = 0
-        total = 0
-        for ant in self.ants:
-            if ant.p == p:
-                total += 1
-                if ant.w == 'D':
-                    count += 1
-        try:
-            return count / total
-        except:
-            return None
-
-    def get_shd(self):
-        return np.sum(np.square((self.Pl / len(self.contacts)) - (len(self.ants) / (K1*K2)))) / (K1 * K2)
 
     def update(self):
         for ant in self.ants:
@@ -154,35 +174,35 @@ class Colony:
     def draw(self):
         win.fill((255,255,255))
         # Draw grid lines (runs slow with high grid size)
-        '''for i in range(K1):
+        for i in range(K1):
             for j in range(K2):
                 pygame.draw.line(win, (230,230,230), (i*scale, j*scale), (K1*scale, j*scale))
-                pygame.draw.line(win, (230,230,230), (i*scale, j*scale), (i*scale, K2*scale))'''
+                pygame.draw.line(win, (230,230,230), (i*scale, j*scale), (i*scale, K2*scale))
         for n in range(len(self.ants)):
             self.ants[n].draw()
         for n in range(len(self.sfzs)):
             self.sfzs[n].draw()
+        for n in range(len(self.walls)):
+            self.walls[n].draw()
         pygame.display.update()
 
 if __name__ == '__main__':
     # Start a new pygame window
     run = True
+    start = None
+    update = False
     win = pygame.display.set_mode((K1 * scale, K2 * scale))
     pygame.display.set_caption('Ant Nest Simulator')
 
-    # Define custom SFZs
+    # Define SFZs
     sfzs = []
-    '''sfzs.append(SFZ([(x,y) for x in range(15) for y in range(15)], (200, 0, 0)))
-    sfzs.append(SFZ([(x,y) for x in range(K1-15, K1) for y in range(15)], (200, 200, 0)))
-    sfzs.append(SFZ([(x,y) for x in range(K1-15, K1) for y in range(K2-15, K2)], (0, 0, 200)))
-    sfzs.append(SFZ([(x,y) for x in range(15) for y in range(K2-15, K2)], (0, 200, 0)))'''
-    sfzs.append(SFZ([(np.random.randint(K1), np.random.randint(K2))], (200, 0, 0)))
-    sfzs.append(SFZ([(np.random.randint(K1), np.random.randint(K2))], (200, 200, 0)))
-    sfzs.append(SFZ([(np.random.randint(K1), np.random.randint(K2))], (0, 200, 0)))
-    sfzs.append(SFZ([(np.random.randint(K1), np.random.randint(K2))], (0, 0, 200)))
+    colors = [(200, 0, 0), (200, 200, 0), (0, 200, 0), (0, 0, 200)]
+    for n in range(3):
+        i, j = np.random.randint(K1), np.random.randint(K2)
+        sfzs.append(SFZ([(x,y) for x in range(i, i+3) for y in range(j, j+3)], colors[n]))
 
     f = [0.98, 0.8, 0.6, 0.4, 0.2]
-    colonies = [Colony(K1, K2, N, f[i], sfzs, config) for i in range(1)]
+    colonies = [Colony(K1, K2, N, f[i], sfzs = sfzs, config = config) for i in range(5)]
     
     t = 0
     clock = pygame.time.Clock()
@@ -191,14 +211,35 @@ if __name__ == '__main__':
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 run = False
+            elif event.type == pygame.MOUSEBUTTONDOWN and not update:
+                cursor = list(pygame.mouse.get_pos())
+                start = (cursor[0] // scale, cursor[1] // scale)
+            elif event.type == pygame.MOUSEBUTTONUP and not update:
+                cursor = list(pygame.mouse.get_pos())
+                stop = (cursor[0] // scale + (cursor[0] // scale >= start[0]), cursor[1] // scale + (cursor[1] // scale >= start[1]))
+                for colony in colonies:
+                    colony.set_wall(start, stop)
+                start = None
+            elif event.type == pygame.KEYDOWN:
+                update = True
+                for colony in colonies:
+                    if colony.ants == []:
+                        colony.create_ants()
 
         colonies[0].draw()
-        for colony in colonies:
-            colony.update()
-
-        t += 1
-        if t == time_steps:
-            run = False
+        if start != None:
+            cursor = list(pygame.mouse.get_pos())
+            i, j = min(start[0], cursor[0] // scale), min(start[1], cursor[1] // scale)
+            w, h = abs(cursor[0] // scale - start[0]) + (cursor[0] // scale >= start[0]), abs(cursor[1] // scale - start[1]) + (cursor[1] // scale >= start[1])
+            pygame.draw.rect(win, (100, 100, 100), (i*scale, j*scale, w*scale, h*scale), 2)
+            pygame.display.update()
+            
+        if update:
+            for colony in colonies:
+                colony.update()
+            t += 1
+            if t == time_steps:
+                run = False
 
     SHDs = [colony.shd for colony in colonies]
     C = [colony.contacts for colony in colonies]
@@ -212,7 +253,6 @@ if __name__ == '__main__':
     plot = plt.figure(1)
     legend = []
     for i in range(len(SHDs)):
-        print(SHDs[i][0])
         plt.plot(SHDs[i])
         legend.append('SF:' + str(colonies[i].f))
     plt.title(config)
