@@ -1,13 +1,16 @@
 import pygame
 import numpy as np
+import networkx as nx
+import matplotlib.pyplot as plt
 
 class Ant:
-    def __init__(self, location, task, walking_style, information):
+    def __init__(self, name, location, task, walking_style, information):
+        self.name = name
         self.l = location
         self.p = task
         self.w = walking_style
         self.f = information
-        self.beta = np.random.uniform(0,1)
+        self.beta = np.random.uniform(0.01,0.1)
 
         self.network = []
 
@@ -67,6 +70,7 @@ class Colony:
         self.Pl = np.zeros((K1, K2), dtype = int)
         self.config = config
 
+        self.network = np.zeros((N, N), dtype = int)
         self.contacts = np.array([])
         self.shd = np.array([])
 
@@ -111,7 +115,7 @@ class Colony:
                 elif self.config == 'AID':
                     p = np.random.randint(self.P)
                     w = np.random.choice(['R','D'], p = [1-self.f, self.f])
-                ant = Ant((i,j), p, w, (N == 1))
+                ant = Ant(len(self.ants)+1, (i,j), p, w, (N == 1))
                 self.ants.append(ant)
                 self.grid[i,j] = len(self.ants)
                 self.Pl[i,j] += 1
@@ -149,10 +153,12 @@ class Colony:
             else:
                 B = N[np.random.choice(len(N))]
                 u2 = np.random.uniform(0, 1)
-                if u2 < B.beta and A.f != B.f:
-                    contacts += 1
-                    A.f, B.f = 1, 1
+                if u2 < B.beta:
+                    if A.f != B.f:
+                        contacts += 1
+                        A.f, B.f = 1, 1
                     A.l, B.l = B.l, A.l
+                    self.network[A.name-1,B.name-1] += 1
                     self.grid[A.l[0],A.l[1]], self.grid[B.l[0],B.l[1]] = self.grid[B.l[0],B.l[1]], self.grid[A.l[0],A.l[1]]
 
         if self.contacts.size == 0:
@@ -160,14 +166,14 @@ class Colony:
         self.contacts = np.append(self.contacts, [self.contacts[-1] + contacts])
         self.shd = np.append(self.shd, self.get_shd())
 
-    def draw(self, win, scale):
+    def draw_grid(self, win, scale):
         win.fill((255,255,255))
         # Draw grid lines (runs slow with high grid size)
         K1, K2 = self.grid.shape
-        for i in range(K1):
+        '''for i in range(K1):
             for j in range(K2):
                 pygame.draw.line(win, (230,230,230), (i*scale, j*scale), (K1*scale, j*scale))
-                pygame.draw.line(win, (230,230,230), (i*scale, j*scale), (i*scale, K2*scale))
+                pygame.draw.line(win, (230,230,230), (i*scale, j*scale), (i*scale, K2*scale))'''
         for n in range(len(self.ants)):
             self.ants[n].draw(win, scale)
         for n in range(len(self.sfzs)):
@@ -175,3 +181,17 @@ class Colony:
         for n in range(len(self.walls)):
             self.walls[n].draw(win, scale)
         pygame.display.update()
+
+    def draw_network(self):
+        print(self.network)
+        color_map = []
+        for ant in self.ants:
+            if ant.w == 'R':
+                color = (0,0,0)
+            else:
+                color = self.sfzs[ant.p].color
+                color = (color[0]/255, color[1]/255, color[2]/255)
+            color_map.append(color)
+        G = nx.from_numpy_matrix(self.network, parallel_edges = True, create_using = nx.DiGraph())
+        nx.draw(G, with_labels = True, node_size = 1500, node_color = color_map, alpha = 0.5, arrows = True)
+        plt.show()

@@ -4,14 +4,27 @@ import matplotlib.pyplot as plt
 from pygame.constants import MOUSEBUTTONDOWN
 from classes import Ant, Wall, SFZ, Colony
 
-K1, K2 = 50, 50
-N = 250
+K1, K2 = 69, 69
+N = 180
 config = 'RID' # RM, RID, AID
-time_steps = 500
+time_steps = 1500
 dt = 1
 scale = 10
 
 print('SHD max:', N*(K1*K2-N)/(K1*K2)**2)
+
+# Define SFZs
+sfzs = []
+colors = [(200, 0, 0), (200, 200, 0), (0, 200, 0), (0, 0, 200)]
+for n in range(3):
+    i, j = np.random.randint(K1), np.random.randint(K2)
+    sfzs.append(SFZ([(x,y) for x in range(i, i+3) for y in range(j, j+3)], colors[n]))
+
+# Create Colonies to run in parallel
+view = 0 # which colony to visualize
+f = [0.98, 0.8, 0.6, 0.4, 0.2]
+#f = [0.5]
+colonies = [Colony(K1, K2, N, f[i], sfzs = sfzs, config = config) for i in range(len(f))]
 
 # TODO Functions
 # Find the center of SFZ
@@ -24,16 +37,6 @@ if __name__ == '__main__':
     update = False
     win = pygame.display.set_mode((K1 * scale, K2 * scale))
     pygame.display.set_caption('Ant Nest Simulator')
-
-    # Define SFZs
-    sfzs = []
-    colors = [(200, 0, 0), (200, 200, 0), (0, 200, 0), (0, 0, 200)]
-    for n in range(3):
-        i, j = np.random.randint(K1), np.random.randint(K2)
-        sfzs.append(SFZ([(x,y) for x in range(i, i+3) for y in range(j, j+3)], colors[n]))
-
-    f = [0.98, 0.8, 0.6, 0.4, 0.2]
-    colonies = [Colony(K1, K2, N, f[i], sfzs = sfzs, config = config) for i in range(5)]
     
     t = 0
     clock = pygame.time.Clock()
@@ -57,7 +60,7 @@ if __name__ == '__main__':
                     if colony.ants == []:
                         colony.create_ants()
 
-        colonies[0].draw(win, scale)
+        colonies[view].draw_grid(win, scale)
         if start != None:
             cursor = list(pygame.mouse.get_pos())
             i, j = min(start[0], cursor[0] // scale), min(start[1], cursor[1] // scale)
@@ -73,13 +76,16 @@ if __name__ == '__main__':
                 run = False
 
     SHDs = [colony.shd for colony in colonies]
-    C = [colony.contacts for colony in colonies]
-    R = np.array([(C[0][i+1]-C[0][i])/dt for i in range(len(C[0])-1)])
+    #C = [colony.contacts for colony in colonies]
+    #R = np.array([(C[0][i+1]-C[0][i])/dt for i in range(len(C[0])-1)])
     #I = C / N
 
     # Spatial Fidelity of each task group
     '''for p in range(colony.P):
         print('SF('+str(p)+'):', colony.get_sf(p))'''
+
+    if N <= 50:
+        colonies[view].draw_network()
 
     plot = plt.figure(1)
     legend = []
