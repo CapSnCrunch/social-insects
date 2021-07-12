@@ -4,31 +4,32 @@ import matplotlib.pyplot as plt
 from pygame.constants import MOUSEBUTTONDOWN
 from classes import Ant, Wall, SFZ, Colony
 
-K1, K2 = 69, 69
-N = 180
-config = 'RID' # RM, RID, AID
-time_steps = 1500
-dt = 1
-scale = 10
-
-print('SHD max:', N*(K1*K2-N)/(K1*K2)**2)
+K1, K2 = 50, 50 # dimensions of initial colony (int)
+N = 15 # number of ants in the initial colony (int)
+P = 3 # number of sfzs in the initial colony (int)
+config = 'RID' # ('RM', 'RID', 'AID')
+mode = 'tunnel' # determines whether additions to grid are additive ('wall') or subtractive ('tunnel')
+time_steps = 1500 # number of update steps to run (int)
+scale = 10 # size of individual grid cell (int)
 
 # Define SFZs
-sfzs = []
-colors = [(200, 0, 0), (200, 200, 0), (0, 200, 0), (0, 0, 200)]
+'''sfzs = []
+colors = [(200, 0, 0), (200, 200, 0), (0, 200, 0), (0, 0, 200)] # list of colors to assign sfz
 for n in range(3):
     i, j = np.random.randint(K1), np.random.randint(K2)
-    sfzs.append(SFZ([(x,y) for x in range(i, i+3) for y in range(j, j+3)], colors[n]))
+    sfzs.append(SFZ([(x,y) for x in range(i, i+3) for y in range(j, j+3)], colors[n]))'''
 
 # Create Colonies to run in parallel
-view = 0 # which colony to visualize
-f = [0.98, 0.8, 0.6, 0.4, 0.2]
-#f = [0.5]
-colonies = [Colony(K1, K2, N, f[i], sfzs = sfzs, config = config) for i in range(len(f))]
+view = 1 # which colony to visualize
+f = [0.98, 0.8, 0.6, 0.4, 0.2] # list of spatial fidelities to run with
+colonies = [Colony(K1, K2, N, f[i], P, config = config, mode = mode) for i in range(len(f))]
 
 # TODO Functions
-# Find the center of SFZ
-# Find the area of a union of rectangles
+# Get motifs (netsci)
+# Find the center of SFZ (average?)
+# Find the area of a union of rectangles (sum self.grid before adding ants)
+
+print('SHD max:', N*(K1*K2-N)/(K1*K2)**2)
 
 if __name__ == '__main__':
     # Start a new pygame window
@@ -52,13 +53,17 @@ if __name__ == '__main__':
                 cursor = list(pygame.mouse.get_pos())
                 stop = (cursor[0] // scale + (cursor[0] // scale >= start[0]), cursor[1] // scale + (cursor[1] // scale >= start[1]))
                 for colony in colonies:
-                    colony.set_wall(start, stop)
+                    if colony.mode == 'wall':
+                        colony.set_wall(start, stop)
+                    elif colony.mode == 'tunnel':
+                        colony.set_tunnel(start, stop)
                 start = None
             elif event.type == pygame.KEYDOWN:
                 update = True
                 for colony in colonies:
                     if colony.ants == []:
                         colony.create_ants()
+                        colony.create_sfzs()
 
         colonies[view].draw_grid(win, scale)
         if start != None:
@@ -86,6 +91,8 @@ if __name__ == '__main__':
 
     if N <= 50:
         colonies[view].draw_network()
+
+    #print(colonies[view].grid)
 
     plot = plt.figure(1)
     legend = []
