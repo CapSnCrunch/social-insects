@@ -1,16 +1,19 @@
 import pygame
 import numpy as np
 import matplotlib.pyplot as plt
+import netsci.visualization as nsv
+import netsci.metrics.motifs as nsm
 from pygame.constants import MOUSEBUTTONDOWN
 from classes import Ant, Wall, SFZ, Colony
 
 K1, K2 = 50, 50 # dimensions of initial colony (int)
-N = 15 # number of ants in the initial colony (int)
+N = 10 # number of ants in the initial colony (int)
 P = 3 # number of sfzs in the initial colony (int)
 config = 'RID' # ('RM', 'RID', 'AID')
 mode = 'tunnel' # determines whether additions to grid are additive ('wall') or subtractive ('tunnel')
 time_steps = 1500 # number of update steps to run (int)
 scale = 10 # size of individual grid cell (int)
+dt = 1
 
 # Define SFZs
 '''sfzs = []
@@ -20,8 +23,9 @@ for n in range(3):
     sfzs.append(SFZ([(x,y) for x in range(i, i+3) for y in range(j, j+3)], colors[n]))'''
 
 # Create Colonies to run in parallel
-view = 1 # which colony to visualize
-f = [0.98, 0.8, 0.6, 0.4, 0.2] # list of spatial fidelities to run with
+#f = [0.98, 0.8, 0.6, 0.4, 0.2] # list of spatial fidelities to run with
+f = [0.8]
+view = min(len(f)-1, 0) # which colony to visualize
 colonies = [Colony(K1, K2, N, f[i], P, config = config, mode = mode) for i in range(len(f))]
 
 # TODO Functions
@@ -42,7 +46,7 @@ if __name__ == '__main__':
     t = 0
     clock = pygame.time.Clock()
     while run:
-        clock.tick(100)
+        clock.tick(30)
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 run = False
@@ -81,20 +85,24 @@ if __name__ == '__main__':
                 run = False
 
     SHDs = [colony.shd for colony in colonies]
-    #C = [colony.contacts for colony in colonies]
-    #R = np.array([(C[0][i+1]-C[0][i])/dt for i in range(len(C[0])-1)])
-    #I = C / N
+    C = [colony.contacts for colony in colonies]
+    R = [np.array([(contacts[i+1]-contacts[i])/dt for i in range(len(contacts)-1)]) for contacts in C]
+    I = [contacts / N for contacts in C]
 
     # Spatial Fidelity of each task group
     '''for p in range(colony.P):
         print('SF('+str(p)+'):', colony.get_sf(p))'''
+
+    print(colonies[view].network)
+    motif_frequencies = nsm.motifs(colonies[view].network, algorithm = 'brute-force')
+    print(motif_frequencies)
 
     if N <= 50:
         colonies[view].draw_network()
 
     #print(colonies[view].grid)
 
-    plot = plt.figure(1)
+    '''plot1 = plt.figure(1)
     legend = []
     for i in range(len(SHDs)):
         plt.plot(SHDs[i])
@@ -104,16 +112,20 @@ if __name__ == '__main__':
     plt.xlabel('t')
     plt.ylabel('SHD')
 
-    '''plot2 = plt.figure(2)
-    plt.plot(I)
+    plot2 = plt.figure(2)
+    for i in range(len(I)):
+        plt.plot(I[i])
     plt.title('Proportion of Informed Ants')
+    plt.legend(legend)
     plt.xlabel('t')
     plt.ylabel('I(t)')
 
     plot3 = plt.figure(3)
-    plt.scatter(np.arange(len(R)), R, s = 3)
+    for i in range(len(R)):
+        plt.scatter(np.arange(len(R[i])), R[i], s = 2)
     plt.title('Contact Rate')
+    plt.legend(legend)
     plt.xlabel('t')
-    plt.ylabel('C(t) - C(t-dt)')'''
+    plt.ylabel('C(t) - C(t-dt)')
 
-    plt.show()
+    plt.show()'''

@@ -10,7 +10,7 @@ class Ant:
         self.p = task
         self.w = walking_style
         self.f = information
-        self.beta = np.random.uniform(0.01,0.1)
+        self.beta = np.random.uniform(0.1,0.3)
 
         self.network = []
 
@@ -141,7 +141,6 @@ class Colony:
             i = np.random.randint(K1)
             j = np.random.randint(K2)
             if np.array_equal(self.grid[i-1:i+2,j-1:j+2], np.zeros((3,3))):
-                print('done')
                 sfz = SFZ([(x,y) for x in range(i-1,i+2) for y in range(j-1,j+2)], colors[len(colors) - P])
                 #self.grid[i-1:i+2,j-1:j+2] = np.ones((3,3)) # Do this temporarily to avoid overlap
                 self.sfzs.append(sfz)
@@ -150,7 +149,6 @@ class Colony:
         for sfz in self.sfzs:
             for i, j in sfz.points:
                 self.grid[i,j] = 0
-        print(self.grid)
 
     def create_ants(self):
         '''Create ants based on rules associated with self.config'''
@@ -213,7 +211,7 @@ class Colony:
                         contacts += 1
                         A.f, B.f = 1, 1
                     A.l, B.l = B.l, A.l
-                    self.network[A.name-1,B.name-1] += 1
+                    self.network[A.name-1,B.name-1] = 1
                     self.grid[A.l[0],A.l[1]], self.grid[B.l[0],B.l[1]] = self.grid[B.l[0],B.l[1]], self.grid[A.l[0],A.l[1]]
 
         if self.contacts.size == 0:
