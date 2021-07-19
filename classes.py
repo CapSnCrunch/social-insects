@@ -2,15 +2,18 @@ import pygame
 import numpy as np
 import networkx as nx
 import matplotlib.pyplot as plt
+from pathing import Node, astar
 
 class Ant:
-    def __init__(self, name, location, task, walking_style, information):
+    def __init__(self, name, location, task, walking_style, information, path = None):
         self.name = name
         self.l = location
         self.p = task
         self.w = walking_style
         self.f = information
-        self.beta = np.random.uniform(0.1,0.3)
+        self.beta = np.random.uniform(0.2,0.5)
+
+        self.path = path
 
         self.network = []
 
@@ -18,6 +21,12 @@ class Ant:
         color = (255*self.f, 0, 255*(1-self.f))
         i, j = self.l
         pygame.draw.rect(win, color, (i*scale, j*scale, scale, scale))
+
+    def path_dist(self, i, j):
+        '''Returns the minimum L1 distance from (i,j) to the SFZ'''
+        x = np.array([p[0] for p in self.points])
+        y = np.array([p[1] for p in self.points])
+        return np.amin(np.absolute(x-i) + np.absolute(y-j))
 
 class Wall:
     def __init__(self, a, b):
@@ -61,10 +70,9 @@ class SFZ:
         return np.amin(np.absolute(x-i) + np.absolute(y-j))
 
     def get_center(self):
-        return
-
-    def intersect(self, sfz):
-        return
+        cx = int(np.mean(np.array([p[0] for p in self.points])))
+        cy = int(np.mean(np.array([p[1] for p in self.points])))
+        return (cx, cy)
 
     def draw(self, win, scale):
         for p in self.points:
@@ -79,12 +87,14 @@ class Colony:
     config: initial distribution to setup colony with
     mode: determines whether additions to grid are additive or subtractive
     '''
-    def __init__(self, K1, K2, N, f, P, config = 'RM', mode = 'wall'):
+    def __init__(self, K1, K2, N, f, P, config = 'RM', mode = 'tunnel'):
         self.grid = np.ones((K1, K2), dtype = int) * -1 * (mode == 'tunnel')
+        self.maze = None
         self.ants = []
         self.sfzs = []
-        self.walls = []
-        self.tunnels = []
+        self.shapes = []
+
+        self.area = K1*K2
 
         self.N = N
         self.f = f
@@ -94,7 +104,10 @@ class Colony:
         self.mode = mode
 
         self.network = np.zeros((N, N), dtype = int)
+        self.new_contacts = np.array([])
         self.contacts = np.array([])
+        self.contacts_w = np.array([])
+        self.contacts_b = np.array([])
         self.shd = np.array([])
 
     def get_sf(self, p):
@@ -114,7 +127,7 @@ class Colony:
     def get_shd(self):
         '''Return the Spatial Heterogeneity Degree of the colony'''
         K1, K2 = self.grid.shape
-        return np.sum(np.square((self.Pl / len(self.contacts)) - (len(self.ants) / (K1*K2)))) / (K1*K2)
+        return np.sum(np.square((self.Pl / len(self.contacts)) - (len(self.ants) / (self.area)))) / (self.area)
 
     def set_wall(self, start, stop):
         '''Create a Wall object between two points and append to self.walls'''
@@ -122,7 +135,7 @@ class Colony:
         i, j = wall.l
         w, h = wall.size
         self.grid[i:i+w, j:j+h] = np.ones((w,h), dtype = int) * -1
-        self.walls.append(wall)
+        self.shapes.append(wall)
 
     def set_tunnel(self, start, stop):
         '''Create a Tunnel object between two points and append to self.tunnels'''
@@ -130,10 +143,20 @@ class Colony:
         i, j = tunnel.l
         w, h = tunnel.size
         self.grid[i:i+w, j:j+h] = np.zeros((w,h), dtype = int)
-        self.tunnels.append(tunnel)
+        self.shapes.append(tunnel)
+
+    def set_sfz(self, start, stop, color = (100, 0, 100)):
+        '''Create an SFZ object between two points and append to self.sfzs'''
+        #if p < abs(self.P):
+        #    pass
+        i, j = (min(start[0],stop[0]), min(start[1],stop[1]))
+        w, h = (abs(stop[0]-start[0]), abs(stop[1]-start[1]))
+        points = [(x,y) for x in range(i,i+w) for y in range(j,j+h)]
+        self.sfzs.append(SFZ(points, color))
+        self.P = len(self.sfzs)
 
     def create_sfzs(self):
-        '''Create P-many 3x3 sfzs which fit within the open spaces of the colony'''
+        '''Create P-many 3x3 randomly placed sfzs which fit within the open spaces of the colony'''
         P = self.P
         K1, K2 = self.grid.shape
         colors = [(200, 0, 0), (200, 200, 0), (0, 200, 0)]
@@ -150,8 +173,10 @@ class Colony:
             for i, j in sfz.points:
                 self.grid[i,j] = 0
 
-    def create_ants(self):
+    def create_ants(self, seed = 0):
         '''Create ants based on rules associated with self.config'''
+        self.maze = abs(self.grid)
+        np.random.seed(seed)
         N = self.N
         K1, K2 = self.grid.shape
         while N > 0:
@@ -167,7 +192,7 @@ class Colony:
                 elif self.config == 'AID':
                     p = np.random.randint(self.P)
                     w = np.random.choice(['R','D'], p = [1-self.f, self.f])
-                ant = Ant(len(self.ants)+1, (i,j), p, w, (N == 1))
+                ant = Ant(len(self.ants)+1, (i,j), p, w, (N == 1), astar(self.maze, (i,j), self.sfzs[p].center)[1:])
                 self.ants.append(ant)
                 self.grid[i,j] = len(self.ants)
                 self.Pl[i,j] += 1
@@ -175,12 +200,13 @@ class Colony:
 
     def update(self):
         '''Make changes to colony for a single time step (described by flow chart in reference paper)'''
+        np.random.seed()
         K1, K2 = self.grid.shape
         for ant in self.ants:
             i, j = ant.l
             self.Pl[i,j] += 1
 
-        contacts = 0
+        new_contacts, contacts,contacts_w, contacts_b = 0, 0, 0, 0
         remaining_ants = list(range(len(self.ants)))
         while remaining_ants != []:
             n = remaining_ants.pop(np.random.randint(len(remaining_ants)))
@@ -188,54 +214,82 @@ class Colony:
             i, j = A.l
             N = [(i+a, j+b) for a, b in [(1, 0), (-1, 0), (0, 1), (0, -1)] if min(i+a,j+b) > -1 and i+a < K1 and j+b < K2]
             N = [self.ants[self.grid[a,b]-1] for a, b in N if self.grid[a,b] not in [0, -1]]
+            repath = False
             u1 = np.random.uniform(0, 1)
             if u1 > len(N) / 4:
                 open_moves = [(i+a,j+b) for a, b in [(1, 0), (-1, 0), (0, 1), (0, -1)] if min(i+a,j+b) > -1 and i+a < K1 and j+b < K2]
                 open_moves = [(a,b) for a, b in open_moves if self.grid[a,b] == 0]
                 if A.w == 'R' and len(open_moves) > 0:
-                    new_i, new_j = open_moves[np.random.choice(len(open_moves))]
-                    A.l = (new_i, new_j)
-                    self.grid[i, j], self.grid[new_i, new_j] = 0, n+1
+                    pass
                 elif A.w == 'D' and len(open_moves) > 0:
                     sfz = self.sfzs[A.p]
-                    min_dist = min([sfz.dist(a, b) for a, b in open_moves])
-                    open_moves = [(a,b) for a, b in open_moves if sfz.dist(a, b) == min_dist]
+
+                    # L1 on all neighbors
+                    '''min_dist = min([sfz.dist(a, b) for a, b in open_moves])
+                    open_moves = [(a,b) for a, b in open_moves if sfz.dist(a, b) == min_dist]'''
+
+                    # A* on all neighbors
+                    '''open_moves = [[len(astar(self.maze, start, self.sfzs[A.p].center)), start] for start in open_moves]
+                    min_dist = min(open_moves)[0]
+                    open_moves = [move[1] for move in open_moves if move[0] == min_dist]'''
+
+                    # Follow ants path if open, else, move with L1 and calculate new path
+                    if len(A.path) == 0 or self.grid[A.path[0]] != 0:
+                        repath = True
+                        # L1 on all neighbors
+                        min_dist = min([sfz.dist(a, b) for a, b in open_moves])
+                        open_moves = [(a,b) for a, b in open_moves if sfz.dist(a, b) == min_dist]
+
+                    else:
+                        if A.path[0] in open_moves: open_moves = [A.path[0]]
+                        A.path = A.path[1:]
+                
+                if len(open_moves) > 0:
                     new_i, new_j = open_moves[np.random.choice(len(open_moves))]
                     A.l = (new_i, new_j)
                     self.grid[i, j], self.grid[new_i, new_j] = 0, n+1
+
+                if repath:
+                    A.path = astar(self.maze, A.l, self.sfzs[A.p].center)[1:]
+
             else:
                 B = N[np.random.choice(len(N))]
                 u2 = np.random.uniform(0, 1)
                 if u2 < B.beta:
                     if A.f != B.f:
-                        contacts += 1
+                        new_contacts += 1
                         A.f, B.f = 1, 1
+                    contacts += 1
+                    if A.p == B.p:
+                        contacts_w += 1
+                    else:
+                        contacts_b += 1
                     A.l, B.l = B.l, A.l
                     self.network[A.name-1,B.name-1] = 1
                     self.grid[A.l[0],A.l[1]], self.grid[B.l[0],B.l[1]] = self.grid[B.l[0],B.l[1]], self.grid[A.l[0],A.l[1]]
 
         if self.contacts.size == 0:
+            self.new_contacts = np.append(self.contacts, [0])
             self.contacts = np.append(self.contacts, [0])
+            self.contacts_w = np.append(self.contacts_w, [0])
+            self.contacts_b = np.append(self.contacts_b, [0])
+        self.new_contacts = np.append(self.new_contacts, [self.new_contacts[-1] + new_contacts])
         self.contacts = np.append(self.contacts, [self.contacts[-1] + contacts])
+        self.contacts_w = np.append(self.contacts_w, [self.contacts_w[-1] + contacts_w])
+        self.contacts_b = np.append(self.contacts_b, [self.contacts_b[-1] + contacts_b])
         self.shd = np.append(self.shd, self.get_shd())
 
     def draw_grid(self, win, scale):
         '''Draw grid, walls or tunnels based on self.mode, ants, and sfzs'''
+        win.fill((0, 0, 0))
         K1, K2 = self.grid.shape
-        if self.mode == 'wall':
-            # Draw grid lines (runs slow with high grid size)
-            win.fill((255, 255, 255))
-            for i in range(K1):
-                for j in range(K2):
-                    pygame.draw.line(win, (230,230,230), (i*scale, j*scale), (K1*scale, j*scale))
-                    pygame.draw.line(win, (230,230,230), (i*scale, j*scale), (i*scale, K2*scale))
-            for n in range(len(self.walls)):
-                self.walls[n].draw(win, scale)
-        elif self.mode == 'tunnel':
-            win.fill((0, 0, 0))
-            for n in range(len(self.tunnels)):
-                self.tunnels[n].draw(win, scale)
-        
+        # Draw grid lines (runs slow with high grid size)
+        '''for i in range(K1):
+            for j in range(K2):
+                pygame.draw.line(win, (230,230,230), (i*scale, j*scale), (K1*scale, j*scale))
+                pygame.draw.line(win, (230,230,230), (i*scale, j*scale), (i*scale, K2*scale))'''
+        for n in range(len(self.shapes)):
+            self.shapes[n].draw(win, scale)
         for n in range(len(self.ants)):
             self.ants[n].draw(win, scale)
         for n in range(len(self.sfzs)):
