@@ -6,8 +6,8 @@ import netsci.metrics.motifs as nsm
 from pygame.constants import MOUSEBUTTONDOWN
 from classes import Ant, Wall, SFZ, Colony
 
-K1, K2 = 75, 30 # dimensions of initial colony (int)
-N = 16 # number of ants in the initial colony (int)
+K1, K2 = 30, 30 # dimensions of initial colony (int)
+N = 30 # number of ants in the initial colony (int)
 density = 0.3 # density of ants in the initial colont (0-1)
 P = 2 # number of sfzs in the initial colony (int)
 config = 'RID' # ('RM', 'RID', 'AID')
@@ -25,7 +25,7 @@ for n in range(3):
 
 # Create Colonies to run in parallel
 f = [0.98, 0.8, 0.6, 0.4, 0.2] # list of spatial fidelities to run with
-f = [0.8 for i in range(30)]
+f = [0.8 for i in range(1)]
 view = 0 # which colony to visualize
 colonies = [Colony(K1, K2, N, f[i], P, config = config, mode = mode) for i in range(len(f))]
 
@@ -33,8 +33,8 @@ print('SHD max:', N*(K1*K2-N)/(K1*K2)**2)
 
 def undo(command, colonies):
     for colony in colonies:
-        if command in ['wall', 'tunnel'] and colony.shapes: 
-            shape = colony.shapes.pop()
+        if command in ['wall', 'tunnel'] and colony.shapes:
+            colony.grid = colony.shapes.pop()[1]
         elif command == 'sfz' and colony.sfzs: 
             colony.sfzs.pop()
 

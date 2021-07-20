@@ -1,3 +1,4 @@
+import copy
 import pygame
 import numpy as np
 import networkx as nx
@@ -134,16 +135,16 @@ class Colony:
         wall = Wall(start, stop)
         i, j = wall.l
         w, h = wall.size
+        self.shapes.append((wall, copy.deepcopy(self.grid)))
         self.grid[i:i+w, j:j+h] = np.ones((w,h), dtype = int) * -1
-        self.shapes.append(wall)
 
     def set_tunnel(self, start, stop):
         '''Create a Tunnel object between two points and append to self.tunnels'''
         tunnel = Tunnel(start, stop)
         i, j = tunnel.l
         w, h = tunnel.size
+        self.shapes.append((tunnel, copy.deepcopy(self.grid)))
         self.grid[i:i+w, j:j+h] = np.zeros((w,h), dtype = int)
-        self.shapes.append(tunnel)
 
     def set_sfz(self, start, stop, color = (100, 0, 100)):
         '''Create an SFZ object between two points and append to self.sfzs'''
@@ -289,7 +290,7 @@ class Colony:
                 pygame.draw.line(win, (230,230,230), (i*scale, j*scale), (K1*scale, j*scale))
                 pygame.draw.line(win, (230,230,230), (i*scale, j*scale), (i*scale, K2*scale))'''
         for n in range(len(self.shapes)):
-            self.shapes[n].draw(win, scale)
+            self.shapes[n][0].draw(win, scale)
         for n in range(len(self.ants)):
             self.ants[n].draw(win, scale)
         for n in range(len(self.sfzs)):
