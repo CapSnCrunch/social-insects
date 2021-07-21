@@ -6,9 +6,9 @@ import netsci.metrics.motifs as nsm
 from pygame.constants import MOUSEBUTTONDOWN
 from classes import Ant, Wall, SFZ, Colony
 
-K1, K2 = 30, 30 # dimensions of initial colony (int)
-N = 30 # number of ants in the initial colony (int)
-density = 0.3 # density of ants in the initial colont (0-1)
+K1, K2 = 40, 20 # dimensions of initial colony (int)
+N = 10 # number of ants in the initial colony (int)
+density = 0.2 # (ignore N and use constant desity (0-1), use None to specify N)
 P = 2 # number of sfzs in the initial colony (int)
 config = 'RID' # ('RM', 'RID', 'AID')
 mode = 'tunnel' # determines whether additions to grid are additive ('wall') or subtractive ('tunnel')
@@ -24,10 +24,10 @@ for n in range(3):
     sfzs.append(SFZ([(x,y) for x in range(i, i+3) for y in range(j, j+3)], colors[n]))'''
 
 # Create Colonies to run in parallel
-f = [0.98, 0.8, 0.6, 0.4, 0.2] # list of spatial fidelities to run with
-f = [0.8 for i in range(1)]
+#f = [0.98, 0.8, 0.6, 0.4, 0.2] # list of spatial fidelities to run with
+f = [0.8 for i in range(50)]
 view = 0 # which colony to visualize
-colonies = [Colony(K1, K2, N, f[i], P, config = config, mode = mode) for i in range(len(f))]
+colonies = [Colony(K1, K2, N, f[i], P, density = density,config = config, mode = mode) for i in range(len(f))]
 
 print('SHD max:', N*(K1*K2-N)/(K1*K2)**2)
 
@@ -35,7 +35,7 @@ def undo(command, colonies):
     for colony in colonies:
         if command in ['wall', 'tunnel'] and colony.shapes:
             colony.grid = colony.shapes.pop()[1]
-        elif command == 'sfz' and colony.sfzs: 
+        elif command == 'sfz' and colony.sfzs:
             colony.sfzs.pop()
 
 if __name__ == '__main__':
@@ -45,8 +45,11 @@ if __name__ == '__main__':
     current_shape = 'wall' if mode == 'wall' else 'tunnel'
     commands = []
     update = False
+
     win = pygame.display.set_mode((K1 * scale, K2 * scale))
     pygame.display.set_caption('Ant Nest Simulator')
+    pygame.font.init()
+    font = pygame.font.SysFont('Calibri', scale)
     
     t = 0
     clock = pygame.time.Clock()
@@ -90,6 +93,8 @@ if __name__ == '__main__':
             cursor = list(pygame.mouse.get_pos())
             i, j = min(start[0], cursor[0] // scale), min(start[1], cursor[1] // scale)
             w, h = abs(cursor[0] // scale - start[0]) + (cursor[0] // scale >= start[0]), abs(cursor[1] // scale - start[1]) + (cursor[1] // scale >= start[1])
+            textsurface = font.render('('+str(w)+', '+str(h)+')', False, (100,100,100))
+            win.blit(textsurface, (cursor[0] - 3*scale, cursor[1] - scale))
             pygame.draw.rect(win, (100, 100, 100), (i*scale, j*scale, w*scale, h*scale), 2)
             pygame.display.update()
             
@@ -101,22 +106,26 @@ if __name__ == '__main__':
                 run = False
 
     SHDs = [colony.shd for colony in colonies]
+
     C = [colony.contacts for colony in colonies]
+    C_w = [colony.contacts_w for colony in colonies]
+    C_b = [colony.contacts_b for colony in colonies]
+
     R = [np.array([(contacts[i+1]-contacts[i])/dt for i in range(len(contacts)-1)]) for contacts in C]
-    I = [contacts / N for contacts in [colony.new_contacts for colony in colonies]]
+    R_w = [np.array([(contacts[i+1]-contacts[i])/(dt*colonies[0].P) for i in range(len(contacts)-1)]) for contacts in C_w]
+    R_b = [np.array([(contacts[i+1]-contacts[i])/(dt*colonies[0].P) for i in range(len(contacts)-1)]) for contacts in C_b]
+
+    I = [contacts / colonies[0].N for contacts in [colony.new_contacts for colony in colonies]]
 
     # Spatial Fidelity of each task group
     '''for p in range(colony.P):
         print('SF('+str(p)+'):', colony.get_sf(p))'''
 
-    #print(colonies[view].network)
     motif_frequencies = nsm.motifs(colonies[view].network, algorithm = 'brute-force')
     print(motif_frequencies)
 
-    if N <= 50:
+    if colonies[0].N <= 50:
         colonies[view].draw_network()
-
-    #print(colonies[view].grid)
 
     plot1 = plt.figure(1)
     plt.title('Motif Counts')
@@ -125,10 +134,10 @@ if __name__ == '__main__':
     plot2 = plt.figure(2)
     legend = []
     for i in range(len(SHDs)):
-        plt.plot(SHDs[i])
+        plt.plot(np.arange(len(SHDs[i]))[30:], SHDs[i][30:])
         legend.append('SF:' + str(colonies[i].f))
     plt.title(config)
-    plt.legend(legend)
+    #plt.legend(legend)
     plt.xlabel('t')
     plt.ylabel('SHD')
 
@@ -136,16 +145,45 @@ if __name__ == '__main__':
     for i in range(len(I)):
         plt.plot(I[i])
     plt.title('Proportion of Informed Ants')
-    plt.legend(legend)
+    #plt.legend(legend)
     plt.xlabel('t')
     plt.ylabel('I(t)')
 
     plot4 = plt.figure(4)
+    print(np.mean(np.vstack(I), axis = 0))
+    plt.fill_between(np.arange(len(I[0])), np.mean(np.vstack(I), axis = 0) - 2*np.std(np.vstack(I), axis = 0), np.mean(np.vstack(I), axis = 0) + 2*np.std(np.vstack(I), axis = 0), alpha = 0.2)
+    plt.plot(np.mean(np.vstack(I), axis = 0))
+    plt.title('Proportion of Informed Ants')
+    #plt.legend(legend)
+    plt.xlabel('t')
+    plt.ylabel('I(t)')
+
+    '''plot5 = plt.figure(5)
     for i in range(len(R)):
         plt.scatter(np.arange(len(R[i])), R[i], s = 2)
-    plt.title('Contact Rate')
-    plt.legend(legend)
+    plt.title('R')
+    #plt.legend(legend)
     plt.xlabel('t')
-    plt.ylabel('C(t) - C(t-dt)')
+    plt.ylabel('Contact Rate')'''
+
+    plot6 = plt.figure(6)
+    for i in range(len(R_w)):
+        pass
+        #plt.scatter(np.arange(len(R_w[i])), R_w[i], s = 2)
+    plt.plot(np.mean(np.vstack(R_w), axis = 0))
+    plt.title('Rw')
+    #plt.legend(legend)
+    plt.xlabel('t')
+    plt.ylabel('Contact Rate')
+
+    plot7 = plt.figure(7)
+    for i in range(len(R)):
+        pass
+        #plt.scatter(np.arange(len(R_b[i])), R_b[i], s = 2)
+    plt.plot(np.mean(np.vstack(R_b), axis = 0))
+    plt.title('Rb')
+    #plt.legend(legend)
+    plt.xlabel('t')
+    plt.ylabel('Contact Rate')
 
     plt.show()

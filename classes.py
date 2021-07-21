@@ -88,7 +88,7 @@ class Colony:
     config: initial distribution to setup colony with
     mode: determines whether additions to grid are additive or subtractive
     '''
-    def __init__(self, K1, K2, N, f, P, config = 'RM', mode = 'tunnel'):
+    def __init__(self, K1, K2, N, f, P, density = 0.2, config = 'RM', mode = 'tunnel'):
         self.grid = np.ones((K1, K2), dtype = int) * -1 * (mode == 'tunnel')
         self.maze = None
         self.ants = []
@@ -96,6 +96,7 @@ class Colony:
         self.shapes = []
 
         self.area = K1*K2
+        self.density = density
 
         self.N = N
         self.f = f
@@ -174,8 +175,11 @@ class Colony:
             for i, j in sfz.points:
                 self.grid[i,j] = 0
 
-    def create_ants(self, seed = 0):
+    def create_ants(self, seed = np.random.randint(500)):
         '''Create ants based on rules associated with self.config'''
+        if self.density != None:
+            self.N = int(self.density * self.area)
+            self.network = np.zeros((self.N, self.N), dtype = int)
         self.maze = abs(self.grid)
         np.random.seed(seed)
         N = self.N
