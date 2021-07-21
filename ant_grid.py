@@ -6,7 +6,7 @@ import netsci.metrics.motifs as nsm
 from pygame.constants import MOUSEBUTTONDOWN
 from classes import Ant, Wall, SFZ, Colony
 
-K1, K2 = 40, 20 # dimensions of initial colony (int)
+K1, K2 = 20, 20 # dimensions of initial colony (int)
 N = 10 # number of ants in the initial colony (int)
 density = 0.3 # (ignore N and use constant desity (0-1), use None to specify N)
 P = 2 # number of sfzs in the initial colony (int)
@@ -25,7 +25,7 @@ for n in range(3):
 
 # Create Colonies to run in parallel
 #f = [0.98, 0.8, 0.6, 0.4, 0.2] # list of spatial fidelities to run with
-f = [0.2 for i in range(30)]
+f = [0.2 for i in range(30)] # first number is spatial fidelity, second number is number of colonies to run
 view = 0 # which colony to visualize
 colonies = [Colony(K1, K2, N, f[i], P, density = density,config = config, mode = mode) for i in range(len(f))]
 
@@ -104,6 +104,8 @@ if __name__ == '__main__':
             t += 1
             if t % 50 == 0:
                 print(t)
+                motif_frequencies = nsm.motifs(colonies[view].network, algorithm = 'brute-force')
+                print(motif_frequencies)
             if t == time_steps:
                 run = False
 
@@ -122,9 +124,6 @@ if __name__ == '__main__':
     # Spatial Fidelity of each task group
     '''for p in range(colony.P):
         print('SF('+str(p)+'):', colony.get_sf(p))'''
-
-    motif_frequencies = nsm.motifs(colonies[view].network, algorithm = 'brute-force')
-    print(motif_frequencies)
 
     if colonies[0].N <= 50:
         colonies[view].draw_network()
