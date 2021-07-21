@@ -12,7 +12,7 @@ class Ant:
         self.p = task
         self.w = walking_style
         self.f = information
-        self.beta = np.random.uniform(0.2,0.5)
+        self.beta = np.random.uniform(0.3,0.7)
 
         self.path = path
 

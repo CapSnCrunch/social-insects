@@ -8,7 +8,7 @@ from classes import Ant, Wall, SFZ, Colony
 
 K1, K2 = 40, 20 # dimensions of initial colony (int)
 N = 10 # number of ants in the initial colony (int)
-density = 0.2 # (ignore N and use constant desity (0-1), use None to specify N)
+density = 0.3 # (ignore N and use constant desity (0-1), use None to specify N)
 P = 2 # number of sfzs in the initial colony (int)
 config = 'RID' # ('RM', 'RID', 'AID')
 mode = 'tunnel' # determines whether additions to grid are additive ('wall') or subtractive ('tunnel')
@@ -25,7 +25,7 @@ for n in range(3):
 
 # Create Colonies to run in parallel
 #f = [0.98, 0.8, 0.6, 0.4, 0.2] # list of spatial fidelities to run with
-f = [0.8 for i in range(50)]
+f = [0.2 for i in range(30)]
 view = 0 # which colony to visualize
 colonies = [Colony(K1, K2, N, f[i], P, density = density,config = config, mode = mode) for i in range(len(f))]
 
@@ -102,6 +102,8 @@ if __name__ == '__main__':
             for colony in colonies:
                 colony.update()
             t += 1
+            if t % 50 == 0:
+                print(t)
             if t == time_steps:
                 run = False
 
@@ -150,7 +152,6 @@ if __name__ == '__main__':
     plt.ylabel('I(t)')
 
     plot4 = plt.figure(4)
-    print(np.mean(np.vstack(I), axis = 0))
     plt.fill_between(np.arange(len(I[0])), np.mean(np.vstack(I), axis = 0) - 2*np.std(np.vstack(I), axis = 0), np.mean(np.vstack(I), axis = 0) + 2*np.std(np.vstack(I), axis = 0), alpha = 0.2)
     plt.plot(np.mean(np.vstack(I), axis = 0))
     plt.title('Proportion of Informed Ants')
