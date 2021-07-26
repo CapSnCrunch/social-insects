@@ -6,15 +6,18 @@ import netsci.metrics.motifs as nsm
 from pygame.constants import MOUSEBUTTONDOWN
 from classes import Ant, Wall, SFZ, Colony
 
-K1, K2 = 20, 20 # dimensions of initial colony (int)
+K1, K2 = 81, 15 # dimensions of initial colony (int)
 N = 10 # number of ants in the initial colony (int)
 density = 0.3 # (ignore N and use constant desity (0-1), use None to specify N)
+sf = 0.8 # Spatial fidelity (0-1)
 P = 2 # number of sfzs in the initial colony (int)
 config = 'RID' # ('RM', 'RID', 'AID')
 mode = 'tunnel' # determines whether additions to grid are additive ('wall') or subtractive ('tunnel')
 time_steps = 300 # number of update steps to run (int)
 scale = 20 # size of individual grid cell (int)
 dt = 1
+
+print('Density:', density, 'SF:', sf)
 
 # Define SFZs
 '''sfzs = []
@@ -25,7 +28,7 @@ for n in range(3):
 
 # Create Colonies to run in parallel
 #f = [0.98, 0.8, 0.6, 0.4, 0.2] # list of spatial fidelities to run with
-f = [0.2 for i in range(30)] # first number is spatial fidelity, second number is number of colonies to run
+f = [sf for i in range(30)] # first number is spatial fidelity, second number is number of colonies to run
 view = 0 # which colony to visualize
 colonies = [Colony(K1, K2, N, f[i], P, density = density,config = config, mode = mode) for i in range(len(f))]
 
@@ -54,7 +57,7 @@ if __name__ == '__main__':
     t = 0
     clock = pygame.time.Clock()
     while run:
-        clock.tick(30)
+        clock.tick(15)
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 run = False
