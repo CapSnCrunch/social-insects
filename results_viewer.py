@@ -22,7 +22,7 @@ control = shapes
 rows = densities
 cols = sfs
 
-debug = True
+debug = False
 
 if __name__ == '__main__':
     win = pygame.display.set_mode((scale*3 + 60, int(scale*2.25) + 60))
