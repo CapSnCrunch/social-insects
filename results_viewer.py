@@ -83,7 +83,7 @@ if __name__ == '__main__':
         win.fill((255, 255, 255))
         for i in range(3):
             for j in range(3):
-                win.blit(images[i][j], (scale*i + 30, int(scale*.75*j) + 30))
+                win.blit(images[j][i], (scale*i + 30, int(scale*.75*j) + 30))
 
         # Shape with control
         text = font.render(structure + ' (' + control[view] + ')', False, (0, 0, 0))
