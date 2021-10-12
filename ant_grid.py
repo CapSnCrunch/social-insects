@@ -1,34 +1,36 @@
+import os
+import pickle
 import pygame
 import numpy as np
+from os.path import exists
 import matplotlib.pyplot as plt
 import netsci.visualization as nsv
 import netsci.metrics.motifs as nsm
 from pygame.constants import MOUSEBUTTONDOWN
 from classes import Ant, Wall, SFZ, Colony
 
-K1, K2 = 81, 15 # dimensions of initial colony (int)
-N = 10 # number of ants in the initial colony (int)
-density = 0.3 # (ignore N and use constant desity (0-1), use None to specify N)
+K1, K2 = 50, 50 # dimensions of initial colony (int)
+N = 10 # number of ants in the initial colony (int) (ignored if density is specified)
+density = 0.0378 # (ignore N and use constant desity (0-1), use None to specify N) .0378
 sf = 0.8 # Spatial fidelity (0-1)
 P = 2 # number of sfzs in the initial colony (int)
 config = 'RID' # ('RM', 'RID', 'AID')
 mode = 'tunnel' # determines whether additions to grid are additive ('wall') or subtractive ('tunnel')
 time_steps = 300 # number of update steps to run (int)
-scale = 20 # size of individual grid cell (int)
+scale = 10 # size of individual grid cell (int)
 dt = 1
+
+save_file = 'square_data.dat' # Specify where we want to save the data
+if exists(os.path.dirname(__file__) + '/data/' + save_file):
+    while True:
+        if input("Type 'OVERWRITE' to overwrite existing save file ") == 'OVERWRITE':
+            break
 
 print('Density:', density, 'SF:', sf)
 
-# Define SFZs
-'''sfzs = []
-colors = [(200, 0, 0), (200, 200, 0), (0, 200, 0), (0, 0, 200)] # list of colors to assign sfz
-for n in range(3):
-    i, j = np.random.randint(K1), np.random.randint(K2)
-    sfzs.append(SFZ([(x,y) for x in range(i, i+3) for y in range(j, j+3)], colors[n]))'''
-
 # Create Colonies to run in parallel
 #f = [0.98, 0.8, 0.6, 0.4, 0.2] # list of spatial fidelities to run with
-f = [sf for i in range(30)] # first number is spatial fidelity, second number is number of colonies to run
+f = [sf for i in range(40)] # first number is spatial fidelity, second number is number of colonies to run
 view = 0 # which colony to visualize
 colonies = [Colony(K1, K2, N, f[i], P, density = density,config = config, mode = mode) for i in range(len(f))]
 
@@ -124,6 +126,12 @@ if __name__ == '__main__':
 
     I = [contacts / colonies[0].N for contacts in [colony.new_contacts for colony in colonies]]
 
+    with open(os.path.dirname(__file__) + '/data/' + save_file, 'wb') as f:
+        pickle.dump(SHDs, f)
+        pickle.dump(R_w, f)
+        pickle.dump(R_b, f)
+        pickle.dump(I, f)
+
     # Spatial Fidelity of each task group
     '''for p in range(colony.P):
         print('SF('+str(p)+'):', colony.get_sf(p))'''
@@ -133,7 +141,7 @@ if __name__ == '__main__':
 
     plot1 = plt.figure(1)
     plt.title('Motif Counts')
-    plt.bar(np.arange(3,16), motif_frequencies[3:])
+    plt.bar(np.arange(0,16), motif_frequencies)
 
     plot2 = plt.figure(2)
     legend = []

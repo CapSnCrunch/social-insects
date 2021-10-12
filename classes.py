@@ -230,8 +230,8 @@ class Colony:
                     sfz = self.sfzs[A.p]
 
                     # L1 on all neighbors
-                    '''min_dist = min([sfz.dist(a, b) for a, b in open_moves])
-                    open_moves = [(a,b) for a, b in open_moves if sfz.dist(a, b) == min_dist]'''
+                    min_dist = min([sfz.dist(a, b) for a, b in open_moves])
+                    open_moves = [(a,b) for a, b in open_moves if sfz.dist(a, b) == min_dist]
 
                     # A* on all neighbors
                     '''open_moves = [[len(astar(self.maze, start, self.sfzs[A.p].center)), start] for start in open_moves]
@@ -239,7 +239,7 @@ class Colony:
                     open_moves = [move[1] for move in open_moves if move[0] == min_dist]'''
 
                     # Follow ants path if open, else, move with L1 and calculate new path
-                    if len(A.path) == 0 or self.grid[A.path[0]] != 0:
+                    '''if len(A.path) == 0 or self.grid[A.path[0]] != 0:
                         repath = True
                         # L1 on all neighbors
                         min_dist = min([sfz.dist(a, b) for a, b in open_moves])
@@ -247,7 +247,7 @@ class Colony:
 
                     else:
                         if A.path[0] in open_moves: open_moves = [A.path[0]]
-                        A.path = A.path[1:]
+                        A.path = A.path[1:]'''
                 
                 if len(open_moves) > 0:
                     new_i, new_j = open_moves[np.random.choice(len(open_moves))]
