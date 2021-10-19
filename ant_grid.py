@@ -9,7 +9,7 @@ import netsci.metrics.motifs as nsm
 from pygame.constants import MOUSEBUTTONDOWN
 from classes import Ant, Wall, SFZ, Colony
 
-K1, K2 = 50, 50 # dimensions of initial colony (int)
+K1, K2 = 70, 30 # dimensions of initial colony (int)
 N = 10 # number of ants in the initial colony (int) (ignored if density is specified)
 density = 0.0378 # (ignore N and use constant desity (0-1), use None to specify N) .0378
 sf = 0.8 # Spatial fidelity (0-1)
@@ -20,7 +20,7 @@ time_steps = 300 # number of update steps to run (int)
 scale = 10 # size of individual grid cell (int)
 dt = 1
 
-save_file = 'square_data.dat' # Specify where we want to save the data
+save_file = 'chain_data_08.dat' # Specify where we want to save the data
 if exists(os.path.dirname(__file__) + '/data/' + save_file):
     while True:
         if input("Type 'OVERWRITE' to overwrite existing save file ") == 'OVERWRITE':
